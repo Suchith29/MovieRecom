@@ -3,15 +3,11 @@ import faiss
 import pickle
 import numpy as np
 import pandas as pd
-from sqlalchemy import create_engine
 from config import DB_CONFIG
+from trainmodel import fetch_movie_data  # Import fetch_movie_data from trainmodel
 
 # Initialize Flask app
 app = Flask(__name__)
-
-# Database Connection
-DATABASE_URL = f"mysql+pymysql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
-engine = create_engine(DATABASE_URL)
 
 # Load Pre-trained Models
 with open("data/tfidf_vectorizer.pkl", "rb") as f:
@@ -27,22 +23,6 @@ with open("data/movie_titles.pkl", "rb") as f:
 faiss_index = faiss.read_index("data/hnsw_index.bin")
 
 # Fetch movie data
-def fetch_movie_data():
-    query = """
-        SELECT id, title, overview, genres, keywords
-        FROM movie
-        LIMIT 42174
-    """
-    df = pd.read_sql_query(query, engine)
-    df['combined_features'] = (
-        df['genres'].fillna('') + " " +
-        df['keywords'].fillna('') + " " +
-        df['overview'].fillna('')
-    )
-    df['title_lower'] = df['title'].str.lower()
-    movie_dict = {title: idx for idx, title in enumerate(df['title_lower'])}
-    return df, movie_dict
-
 movie_df, movie_dict = fetch_movie_data()
 
 # Recommendation function
@@ -59,9 +39,13 @@ def recommend_movies(movie_titles_list, top_n=10):
 
     distances, indices = faiss_index.search(combined_query_vector, top_n + len(input_movies_lower))
 
-    recommended_movies = [
-        movie_titles[i] for i in indices[0] if movie_titles[i].lower() not in input_movies_lower
-    ][:top_n]
+    recommended_movies = []
+    for i, dist in zip(indices[0], distances[0]):
+        if movie_titles[i].lower() not in input_movies_lower:
+            similarity_percent = round((1 - dist) * 100, 2)  # Convert distance to percentage similarity
+            recommended_movies.append({"title": movie_titles[i], "similarity": similarity_percent})
+        if len(recommended_movies) >= top_n:
+            break
 
     return recommended_movies
 
