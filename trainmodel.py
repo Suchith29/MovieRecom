@@ -3,19 +3,6 @@ import pickle
 import numpy as np
 import pandas as pd
 import mariadb
-from sqlalchemy import create_engine
-from sklearn.feature_extraction.text import TfidfVectorizer
-from config import DB_CONFIG
-
-# Database Connection
-DATABASE_URL = f"mariadb+mariadbconnector://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
-engine = create_engine(DATABASE_URL)
-
-import faiss
-import pickle
-import numpy as np
-import pandas as pd
-import mariadb
 from sqlalchemy import create_engine, text
 from sklearn.feature_extraction.text import TfidfVectorizer
 from config import DB_CONFIG
@@ -30,7 +17,6 @@ def fetch_movie_data():
     query = text("""
         SELECT id, title, overview, genres, keywords
         FROM movie
-        LIMIT 42174
     """)  # Ensure query is properly formatted as a SQLAlchemy text object
 
     with engine.connect() as connection:
@@ -43,7 +29,8 @@ def fetch_movie_data():
     )
     df['title_lower'] = df['title'].str.lower()
     movie_dict = {title: idx for idx, title in enumerate(df['title_lower'])}
-    return df,movie_dict
+    id_dict = {idx: id for idx, id in enumerate(df['id'])}
+    return df, movie_dict, id_dict
 
 
 # Function to create HNSW index
@@ -62,7 +49,7 @@ def create_hnsw_index(data):
 
 # Main code
 if __name__ == "__main__":
-    df,_ = fetch_movie_data()
+    df, movie_dict, id_dict = fetch_movie_data()
 
     vectorizer = TfidfVectorizer(stop_words='english', max_features=50000)
     tfidf_matrix = vectorizer.fit_transform(df['combined_features'])
@@ -78,5 +65,8 @@ if __name__ == "__main__":
 
     with open("data/svd_model.pkl", "wb") as f:
         pickle.dump(svd, f)
+
+    with open("data/movie_ids.pkl", "wb") as f:
+        pickle.dump(id_dict, f)
 
     print("Model training complete. FAISS index and models saved.")

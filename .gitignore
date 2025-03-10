@@ -1,0 +1,47 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+ENV/
+*.env
+*.venv
+
+# Django specific
+*.log
+local_settings.py
+db.sqlite3
+instance/
+.media
+
+# Pytest and coverage reports
+.coverage
+htmlcov/
+
+# MySQL / PostgreSQL / SQLite database files
+*.sqlite3
+*.db
+*.pyo
+
+# Static and media files
+/static/
+/media/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+
+# Celery
+celerybeat-schedule
+
+# MacOS & Windows system files
+.DS_Store
+Thumbs.db
